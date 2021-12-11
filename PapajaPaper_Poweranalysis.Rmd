@@ -1,0 +1,176 @@
+---
+title             : "Graduate Statistics Semester Project"
+shorttitle        : "Semester Project"
+
+author: 
+  - name          : "Patrick Ihejirika"
+    affiliation   : "1"
+
+
+affiliation:
+  - id            : "1"
+    institution   : "CUNY Brooklyn College"
+
+
+bibliography      : ["r-references.bib"]
+
+floatsintext      : yes
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+linenumbers       : yes
+mask              : no
+draft             : no
+
+documentclass     : "apa6"
+classoption       : "man"
+output            : papaja::apa6_pdf
+---
+
+```{r setup, include = FALSE}
+library("papaja")
+library(readr)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(pwr)
+r_refs("r-references.bib")
+```
+
+```{r analysis-preferences}
+# Seed for random number generation
+set.seed(42)
+knitr::opts_chunk$set(cache.extra = knitr::rand_seed)
+```
+
+```{r}
+urlfile= "https://raw.githubusercontent.com/CrumpLab/statisticsLab/master/data/SchroederEpley2015data.csv"
+all_data <- read_csv(url(urlfile))
+
+#T-Test between Intellectual Rating and Condition (Audio = 1/Transcript = 0)
+IR_C_test = t.test(Intellect_Rating~CONDITION, data=all_data, var.equal=TRUE)
+
+#T-Test between Impression Rating and Condition (Audio = 1/Transcript = 0)
+ImpR_C_test = t.test(Impression_Rating~CONDITION, data=all_data, var.equal=TRUE)
+
+#T-Test between Hiring Rating and Condition (Audio = 1/Transcript = 0)
+HR_C_test = t.test(Hire_Rating~CONDITION, data=all_data, var.equal=TRUE)
+```
+
+
+# Background
+Studies exploring the relationships between social interactions and the required underlying cognitive processes provide insight on mechanisms involved in the perception of others. This perception of others is influenced by outward egocentric projection, behavior interpretation & stereotype formation. @Hall_2007 and @kruger2005egocentrism found evidence that the intonation, cadence and amplitude of one's speech, enables vocal communication to be an effective medium of communicating one's thoughts over other methods of discourse. 
+
+The importance of vocal communication and its potential to portray the speaker’s mental capacity serves as the foundation for the research conducted by -@schr_SoundofInt. Schroder & Epley assessed whether and the extent that the perception of a person's mental capacity is influenced by the presence or absence of the person’s voice over the course of 4 separate experiments. Seeing as how vocal communication is an effective method of communicating one's thoughts, Schroder & Epley predicted that vocal speech will enable the portrayal of the speaker’s mental capacity better than that of transcribed speech throughout the experiments.
+
+
+## Participants
+Thirty nine professional recruiters from Fortune 500 companies were used. The average age of the recruiters was `r mean(na.omit(all_data$age)) ` years (SD = `r sd(na.omit(all_data$age))`)
+
+## Material
+We used `r cite_r("r-references.bib")` for all our analyses.
+
+
+## Procedure
+The thirty nine professional recruiters were presented with either orally recorded pitch presentations (audio pitch presentation condition) or the written pitch presentations (transcribed pitch presentation conditions) of eighteen University of Chicago MBA students. Upon completion of the pitch presentations, the recruiters were given a series of survey questions which asked for an evaluation of the candidate's intellect, impression left by the candidates and likelihood of hiring the candidates. Recruiter responses were placed along Likert scales which ordinally ranks responses between 0 to 10. 
+
+Questions evaluating the intellect of candidates asked the recruiters to rate "how competent the candidate seemed compared with an average candidate for an MBA-level position", "how thoughtful the candidate seemed compared with an average candidate for an MBA-level position" & "how intelligent the candidate seemed compared with an average candidate for an MBA-level position". Responses to these questions were placed along Likert scales (0 = much less competent, 10 = much more competent), (0 = much less thoughtful, 10 = much more thoughtful), (0 = much less intelligent, 10 = much more intelligent). The average response of these questions formed a composite measure of perceived intellect.
+
+Questions evaluating the impressions left on them by candidates asked the recruiters to rate "how much they liked the candidate", "how positive their overall impression of the candidate was" & "how negative their overall impression of the candidate was". Responses to these questions were also placed along Likert scales (0 = did not like at all, 10 = extremely liked), (0 = not at all positive, 10 = extremely positive),(0 = not at all positive, 10 = extremely positive). The average response of these questions formed a composite measure of general impressions left on the recruiters by the candidates.
+
+Finally, the question evaluating the likelihood of hiring the candidates asked the recruiters to rate "how likely they would be to hire the candidate for the job". Responses to this question were placed along Likert scales (0 = not at all likely, 10 = extremely likely).
+
+# Results
+```{r, fig.width = 5, fig.cap = "Average ratings of MBA candidates according to specific categories"}
+# repeat CONDITION column three times
+
+condition <- rep(all_data$CONDITION,3)
+
+# make a ratings variable with all three ratings in one variable
+
+ratings <- c(all_data$Intellect_Rating,
+             all_data$Impression_Rating,
+             all_data$Hire_Rating)
+
+# make a new factor variable with the names of the ratings
+# need to repeat each level name the appropriate number of times
+
+num_to_repeat <- length(all_data$CONDITION)
+
+rating_type <- rep(c("Intellect","Impression","Hire"),num_to_repeat)
+
+# put the new variables into a data frame
+
+plot_all <- data.frame(condition,rating_type,ratings)
+
+# Get the means and standard errors for each rating by condition
+
+descriptive_all <- plot_all %>% 
+                    group_by(condition,rating_type) %>% 
+                    summarise(means= mean(ratings),
+                              SEs = sd(ratings)/sqrt(length(ratings)))
+
+# Make the plot
+
+ggplot(descriptive_all, aes(x=rating_type, y=means, group=condition))+ 
+  geom_bar(stat="identity", aes(fill=condition), position='dodge')+ 
+  geom_errorbar(aes(ymin=means-SEs,               
+                    ymax=means+SEs), 
+                width=.1, 
+                position = position_dodge(width=.9)) +
+  geom_point(data=plot_all, aes(x=rating_type, 
+                                y=ratings, 
+                                group=condition), 
+             alpha=.25, 
+             position = position_dodge(width=.9))+
+  geom_point(alpha=.25)+
+  ylab("Rating") + xlab("Type of Rating") + ggtitle(label = "Professional Recruiters Ratings of MBA students",
+              subtitle = "Likert scale ratings according to rating category") + theme(
+  plot.title = element_text(hjust = 0.5),
+  plot.subtitle = element_text(hjust = 0.5)
+)
+```
+
+The results of this analysis indicates that main effect of pitch condition presentation exists for ratings of intellect, impression and hiring likelihood. Professional recruiters believed candidates with audio pitch presentation conditions had significantly larger intellect (M = `r IR_C_test$estimate[2]`, SD = `r sd((subset(all_data, CONDITION == 1))$Intellect_Rating)`) than those with transcribed pitch presentation conditions (M = `r IR_C_test$estimate[1]`, SD = `r sd((subset(all_data, CONDITION == 0))$Intellect_Rating)`) t(`r IR_C_test$parameter`) = `r IR_C_test$statistic`, p = `r format(round(IR_C_test$p.value, 3), nsmall = 3)`, `r IR_C_test$alternative`. Similarly, the results  indicated that candidates with audio pitch presentation conditions left a more positive and less negative impression on the recruiters (M = `r ImpR_C_test$estimate[2]`, SD = `r sd((subset(all_data, CONDITION == 1))$Impression_Rating)`) than candidates with transcribed pitch presentation conditions (M = `r ImpR_C_test$estimate[1]`, SD = `r sd((subset(all_data, CONDITION == 0))$Impression_Rating)`), t(`r ImpR_C_test$parameter`) = `r ImpR_C_test$statistic`, p = `r format(round(ImpR_C_test$p.value, 3), nsmall = 3)`, `r ImpR_C_test$alternative`. Finally, recruiters had a greater likelihood of hiring candidates with audio pitch presentation conditions (M = `r HR_C_test$estimate[2]`, SD = `r sd((subset(all_data, CONDITION == 1))$Hire_Rating)`) than those with transcribed pitch presentations (M = `r HR_C_test$estimate[1]`, SD = `r sd((subset(all_data, CONDITION == 0))$Hire_Rating)`),  t(`r HR_C_test$parameter`) = `r HR_C_test$statistic`, p = `r format(round(HR_C_test$p.value, 3), nsmall = 3)`, `r HR_C_test$alternative`.
+
+# Discussion
+This analysis indicates the existence of evidence of vocal communication being effective mechanism of perception formation. A potential explanation of these findings may be in the effectiveness of voices to convey aspects speech such as intonation, pacing and cadence. Seeing as how these aspects of speech enables for an effective communication of one's thoughts, it should also enable the formation of stronger perceptions of others mental capacity. These stronger perceptions may provide further explanations as to why candidates who used audio as a means of presenting their pitches were perceived as having a larger intellect, leaving a better impression and having a better hiring likelihood by professional recruiters than candidates who transcribed their pitch presentations.
+
+
+
+# Power Analysis
+The experimental design of Schroder & Epley [-@schr_SoundofInt] was a single measures between subjects design with 39 professional recruiters. In this experimental design, a single main effect of pitch presentation is observed. 21 Participants experienced the audio pitch conditions while 18 subjects experience the transcribed pitch conditions. 
+```{r}
+
+effect_sizes <- seq(.1,2,.1)
+power <- sapply(effect_sizes, 
+          FUN = function(x) {
+            pwr.t.test(n=39,
+            d=x,
+            sig.level=.05,
+            type="two.sample",
+            alternative="two.sided")$power})
+plot_df <- data.frame(effect_sizes,power)
+
+
+ggplot(plot_df, aes(x=effect_sizes,
+                    y=power))+
+  geom_point()+
+  geom_line() + xlab("Effect Sizes") + ylab("Power")+ ggtitle(label = "Power Curve") + theme(
+  plot.title = element_text(hjust = 0.5),
+  plot.subtitle = element_text(hjust = 0.5)
+)
+```
+To detect the power of the experimental design, a power curve of a t-test for independent samples (n = 39) was created. This power curve shows the levels of power required to detect a range of effect sizes. The effect sizes range from 0.1 to 2.0 across intervals of 0.1. The power curve above finds that this design has a power of 0.99 to detect an effect of d = 1.0 and larger. The full power curve for this design is displayed in Figure 2
+
+
+\newpage
+
+# References
+
+\begingroup
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}
+
+<div id="refs" custom-style="Bibliography"></div>
+\endgroup

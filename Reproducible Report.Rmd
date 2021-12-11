@@ -1,0 +1,121 @@
+---
+title: "Reproducible Report"
+author: "Patrick Ihejirika"
+date: "12/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Reproducible Report
+
+Brief Description:
+Schroder & Epley (2015) conducted a study which assessed whether a person’s mental capacity could be influenced by the presence or absence of voical stimuli. This relationship between the perception of one's mental capacity to the presence or absence of a voice was explored through 4 experiments. This report focuses on the fourth and final experiment, as its recorded data is available for reproducible analysis. Experiment 4 tasks thirty-nine professional recruiters with assessing the mental capacity of eighteen MBA students from the University of Chicago, based on either the audio pitches or the transcribed pitches of the MBA students. Mental capacity was determined by three independent ratings on the perceived intelligence of the MBA students, the impression left by the MBA students and the likelihood the recruiters would hire the MBA students. Each of these ratings were surveyed on a Likert scale, with a range of 0-10.
+
+Citation: Schroeder, J., & Epley, N. (2015). The sound of intellect: Speech reveals a thoughtful mind, increasing a job candidate’s appeal. Psychological Science, 26, 877-891.
+
+Link: https://journals.sagepub.com/stoken/default+domain/PhtK6MPtXvkgnYRrnGbA/full
+
+
+
+```{r}
+library(readr)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+
+
+urlfile= "https://raw.githubusercontent.com/CrumpLab/statisticsLab/master/data/SchroederEpley2015data.csv"
+all_data <- read_csv(url(urlfile))
+
+#T-Test between Intellectual Rating and Condition (Audio = 1/Transcript = 0)
+IR_C_test = t.test(Intellect_Rating~CONDITION, data=all_data, var.equal=TRUE)
+
+#T-Test between Impression Rating and Condition (Audio = 1/Transcript = 0)
+ImpR_C_test = t.test(Impression_Rating~CONDITION, data=all_data, var.equal=TRUE)
+
+#T-Test between Hiring Rating and Condition (Audio = 1/Transcript = 0)
+HR_C_test = t.test(Hire_Rating~CONDITION, data=all_data, var.equal=TRUE)
+```
+
+
+
+```{r}
+# repeat CONDITION column three times
+
+condition <- rep(all_data$CONDITION,3)
+
+# make a ratings variable with all three ratings in one variable
+
+ratings <- c(all_data$Intellect_Rating,
+             all_data$Impression_Rating,
+             all_data$Hire_Rating)
+
+# make a new factor variable with the names of the ratings
+# need to repeat each level name the appropriate number of times
+
+num_to_repeat <- length(all_data$CONDITION)
+
+rating_type <- rep(c("Intellect","Impression","Hire"),num_to_repeat)
+
+# put the new variables into a data frame
+
+plot_all <- data.frame(condition,rating_type,ratings)
+
+# Get the means and standard errors for each rating by condition
+
+descriptive_all <- plot_all %>% 
+                    group_by(condition,rating_type) %>% 
+                    summarise(means= mean(ratings),
+                              SEs = sd(ratings)/sqrt(length(ratings)))
+
+# Make the plot
+
+ggplot(descriptive_all, aes(x=rating_type, y=means, group=condition))+ 
+  geom_bar(stat="identity", aes(fill=condition), position='dodge')+ 
+  geom_errorbar(aes(ymin=means-SEs,               
+                    ymax=means+SEs), 
+                width=.1, 
+                position = position_dodge(width=.9)) +
+  geom_point(data=plot_all, aes(x=rating_type, 
+                                y=ratings, 
+                                group=condition), 
+             alpha=.25, 
+             position = position_dodge(width=.9))+
+  geom_point(alpha=.25)+
+  ylab("Rating")
+```
+
+
+```{r}
+
+mean_age = as.numeric(mean(na.omit(all_data$age)))
+age_sd = as.numeric(sd(na.omit(all_data$age)))
+
+IR_C_test$estimate[2]
+ImpR_C_test$estimate[2]
+HR_C_test
+
+sd((subset(all_data, CONDITION == 1))$Intellect_Rating)
+
+IR_C_test$conf.int
+
+
+IR_C_test$alternative
+```
+The average age of the professional recruiters was `r mean_age` years (SD = `r age_sd`).
+
+A t-test value of  `r IR_C_test$statistic` was reported when recruiters listened to pitches and rated the intellect of the candidates (M = `r IR_C_test$estimate[2]`, SD = `r sd((subset(all_data, CONDITION == 1))$Intellect_Rating)`) vs when the recruiters read the transcribed pitches of the candidates and rated their intellects (M = `r IR_C_test$estimate[1]`, SD = `r sd((subset(all_data, CONDITION == 0))$Intellect_Rating)`). This t-staistic has a 95% confidence interval of [`r IR_C_test$conf.int`]
+
+
+
+A t-test value of  `r ImpR_C_test$statistic` was reported when recruiters listened to pitches and rated the impressions left on them by  the candidates (M = `r ImpR_C_test$estimate[2]`, SD = `r sd((subset(all_data, CONDITION == 1))$Impression_Rating)`) vs when the recruiters read the transcribed pitches of the candidates and rated their impressions of the candidates (M = `r ImpR_C_test$estimate[1]`, SD = `r sd((subset(all_data, CONDITION == 0))$Impression_Rating)`). This t-staistic has a 95% confidence interval of [`r abs(ImpR_C_test$conf.int)`]
+
+
+A t-test value of  `r HR_C_test$statistic` was reported when recruiters listened to pitches and rated the Hiring potential of the candidates (M = `r HR_C_test$estimate[2]`, SD = `r sd((subset(all_data, CONDITION == 1))$Hire_Rating)`) vs when the recruiters read the transcribed pitches of the candidates and rated the candidates' hiring potential (M = `r HR_C_test$estimate[1]`, SD = `r sd((subset(all_data, CONDITION == 0))$Hire_Rating)`). This t-staistic has a 95% confidence interval of [`r abs(HR_C_test$conf.int)`]
+
+I was successful in recreating the results of the original paper for experiment 4, as I received identical results upon my independent analysis. These results are displayed above, and are available for comparison against the results yielded by from the paper.
+
